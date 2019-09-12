@@ -57,11 +57,24 @@ export class KvPeersService implements PeersService {
     }
   }
 
+
+  async update (peerInfo: Readonly<PeerInfo>): Promise<Peer> {
+    const kvPeer = new KvPeer(peerInfo)
+    await this._storageArea.set(kvPeer.id, kvPeer)
+    return kvPeer
+  }
+
+  async remove (peerId: string): Promise<void> {
+    const peer = await this._storageArea.delete(peerId)
+    // do we need to wait for delete to return, if it returns void anyway, should it return successful or not
+    return
+  }
+
   readonly added: Observable<Peer>
   readonly deleted: Observable<string>
   list: () => Promise<Peer[]>
-  remove: (peerId: string) => Promise<void>
-  update: (peer: Readonly<PeerInfo>) => Promise<Peer>
+  // remove: (peerId: string) => Promise<void>
+  // update: (peer: Readonly<PeerInfo>) => Promise<Peer>
   readonly updated: Observable<Peer>
 
 }
