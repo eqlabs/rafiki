@@ -3,6 +3,9 @@ import {Peer, PeerInfo, PeerRelation, PeersService} from '@interledger/rafiki-co
 import { Observable } from 'rxjs'
 import {AxiosClient} from '@interledger/rafiki-core/build/services/client/axios'
 import {AxiosRequestConfig} from 'axios'
+import { PeerNotFoundError } from '../../errors'
+import debug from 'debug'
+const log = debug('rafiki:kv-peers-service')
 
 class KvPeer implements Peer {
   id: string
@@ -44,6 +47,8 @@ export class KvPeersService implements PeersService {
   async add (peerInfo: Readonly<PeerInfo>): Promise<KvPeer> {
     const kvPeer = new KvPeer(peerInfo)
     await this._storageArea.set(kvPeer.id, kvPeer)
+    // TODO add to added Observable too
+    log('added peer', peerInfo)
     return kvPeer
   }
 
@@ -53,20 +58,31 @@ export class KvPeersService implements PeersService {
       const kvPeer = new KvPeer(peer)
       return kvPeer
     } else {
-      throw new Error('Peer not found')
+      throw new PeerNotFoundError(id)
     }
   }
 
-
   async update (peerInfo: Readonly<PeerInfo>): Promise<Peer> {
-    const kvPeer = new KvPeer(peerInfo)
-    await this._storageArea.set(kvPeer.id, kvPeer)
-    return kvPeer
+    const existingPeer = await this._storageArea.get(peerInfo.id)
+    if (!existingPeer) {
+      throw new PeerNotFoundError(peerInfo.id)
+    }
+    const updatedPeer = new KvPeer(peerInfo)
+    await this._storageArea.set(updatedPeer.id, updatedPeer)
+    // TODO add to updated Observable
+    log('updated peer', peerInfo)
+    return updatedPeer
   }
 
   async remove (peerId: string): Promise<void> {
+    const existingPeer = await this._storageArea.get(peerId)
+    if (!existingPeer) {
+      throw new PeerNotFoundError(peerId)
+    }
     const peer = await this._storageArea.delete(peerId)
-    // do we need to wait for delete to return, if it returns void anyway, should it return successful or not
+    // TODO delete could return success boolean instead of void
+    // TODO add to deleted Obervable
+    log('removed peer', peerId)
     return
   }
 
